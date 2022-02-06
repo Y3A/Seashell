@@ -15,5 +15,5 @@ Core Functionalities:<br/>
 	-- download file:                !get <target filename><br/>
 	-- upload file:                  !put <local filename> (still under development)<br/>
 	-- exit shell:                   !exit<br/>
-	-- run shell commands locally:   !local <command>v
+	-- run shell commands locally:   !local <command><br/>
 	-- view help:                    !help

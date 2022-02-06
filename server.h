@@ -22,11 +22,11 @@ void p_status(const char *s);
 void handle_signals(int signo);
 
 /*
-	* core functionalities:
-	*	serv_EXEC:    execute shell commands
-	*	serv_GET:     download file
-	*	serv_PUT:     upload file
-	*	serv_EXIT:    close RAT
+    * core functionalities:
+    *    serv_EXEC:    execute shell commands
+    *    serv_GET:     download file
+    *    serv_PUT:     upload file
+    *    serv_EXIT:    close RAT
 */
 BOOL serv_EXEC(IN SOCKET *s, IN const char *params);
 BOOL serv_GET(IN SOCKET *s, IN const char *params);
@@ -36,8 +36,8 @@ BOOL serv_LOCAL(IN SOCKET *s, IN const char *params);
 BOOL serv_HELP(IN SOCKET *s, IN const char *params);
 
 typedef BOOL(*SERV_FUNC) (
-	IN SOCKET *s,
-	IN const char *params
+    IN SOCKET *s,
+    IN const char *params
 );
 
 #define SERV_MAX_CMDS 6
@@ -45,13 +45,13 @@ typedef BOOL(*SERV_FUNC) (
 #define MAX_SERV_CMD_FUNC_SZ 15 // max size of each const char *serv_cmd_funcs below
 
 static const char *serv_cmd_funcs[SERV_MAX_CMDS] = {
-	"!exec", "!get", "!put",
-	"!exit", "!local", "!help"
+    "!exec", "!get", "!put",
+    "!exit", "!local", "!help"
 };
 
 static const SERV_FUNC serv_funcs[SERV_MAX_CMDS] = {
-	serv_EXEC, serv_GET, serv_PUT,
-	serv_EXIT, serv_LOCAL, serv_HELP
+    serv_EXEC, serv_GET, serv_PUT,
+    serv_EXIT, serv_LOCAL, serv_HELP
 };
 
 #endif

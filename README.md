@@ -9,11 +9,11 @@
 
 implant.exe will attempt to connect to attacker 5 times, with a 10 second pause in between.
 
-Core Functionalities:<br/>
-	-- default:                      !exec <command><br/>
-	-- run shell commands on target: !exec <command><br/>
-	-- download file:                !get <target filename><br/>
-	-- upload file:                  !put <local filename> (still under development)<br/>
-	-- exit shell:                   !exit<br/>
-	-- run shell commands locally:   !local <command><br/>
-	-- view help:                    !help
+Core Functionalities:
+    -- default:                      !exec <command>
+    -- run shell commands on target: !exec <command>
+    -- download file:                !get <target filename>
+    -- upload file:                  !put <local filename> (still under development)
+    -- exit shell:                   !exit
+    -- run shell commands locally:   !local <command>
+    -- view help:                    !help

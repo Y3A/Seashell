@@ -212,7 +212,7 @@ BOOL serv_GET(IN SOCKET *s, IN const char *params)
 
     fp = fopen(local_filename, "wb");
     if (!fp) {
-        p_err("[-] Error creating file locally.\n");
+        p_err("[-] Error writing file locally.\n");
         return TRUE;
     }
 
@@ -255,7 +255,60 @@ BOOL serv_GET(IN SOCKET *s, IN const char *params)
 }
 BOOL serv_PUT(IN SOCKET *s, IN const char *params)
 {
-    printf("Put : %s\n", params);
+    char            cmd[BUF_SZ];
+    char            res[BUF_SZ];
+    char            status[BUF_SZ];
+    char            logbuf[260];
+    char            *modparams = NULL, *remote_filename = NULL;
+    FILE            *fp = NULL;
+    unsigned long   nread;
+
+    memset(cmd, 0, sizeof(cmd));
+    memset(res, 0, sizeof(res));
+    memset(logbuf, 0, sizeof(logbuf));
+    modparams = (char *)params;
+
+    strcat(cmd, "!put ");
+    unixpath(modparams);
+    remote_filename = last_unixpath(modparams);
+    strcat(cmd, remote_filename);
+
+    fp = fopen(modparams, "rb");
+    if (!fp) {
+        snprintf(logbuf, sizeof(logbuf), "[-] Error reading %s locally.\n", modparams);
+        p_err(logbuf);
+        p_status("[*] Remember not to put quotes around file path!\n");
+        return TRUE;
+    }
+
+    sendbuf(*s, encrypt(cmd));
+    recvbuf(*s, res);
+    decrypt(res);
+
+    if (strstr(res, STATUS_ERR) != NULL) {
+        p_err("[-] Error writing file remotely.\n");
+        return TRUE;
+    }
+
+    memset(res, 0, sizeof(res));
+
+    nread = fread(res, sizeof(char), sizeof(res), fp);
+    while (nread == BUF_SZ) {
+        sendbuf(*s, encrypt(res));
+        memset(res, 0, sizeof(res));
+        nread = fread(res, sizeof(char), sizeof(res), fp);
+    }
+
+    strcpy(status, STATUS_END);
+    sendbuf(*s, encrypt(status));
+    nread = htonl(nread);
+    send(*s, (unsigned char *)&nread, 8, 0);
+    sendbuf(*s, encrypt(res));
+
+    if (fp)
+        fclose(fp);
+    p_success(STATUS_DONE);
+
     return TRUE;
 }
 

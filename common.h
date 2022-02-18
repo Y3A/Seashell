@@ -24,6 +24,7 @@ unsigned long SERVER_PORT = 11521;
 static const char STATUS_DONE[] = "\033[0;32m[+] Done\033[0m\n";
 static const char STATUS_END[] = "\033[0;33m[*] End\033[0m\n";
 static const char STATUS_ERR[] = "\033[0;31m[-] Err\033[0m\n";
+static const char STATUS_SUCCESS[] = "\033[0;31m[+] Success\033[0m\n";
 
 #define recvbuf(s, buf) recv(s, buf, BUF_SZ, 0)
 #define sendbuf(s, buf) send(s, buf, BUF_SZ, 0)

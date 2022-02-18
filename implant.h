@@ -24,6 +24,7 @@ void enter_cmd_loop(IN SOCKET *s);
 BOOL impl_EXEC(IN SOCKET *s, IN const char *params);
 BOOL impl_GET(IN SOCKET *s, IN const char *params);
 BOOL impl_PUT(IN SOCKET *s, IN const char *params);
+BOOL impl_INJECT(IN SOCKET *s, IN const char *params);
 BOOL impl_EXIT(IN SOCKET *s, IN const char *params);
 
 typedef BOOL (*IMPL_FUNC) (
@@ -34,18 +35,18 @@ typedef BOOL (*IMPL_FUNC) (
 /*
     * command jump table
 */
-#define IMPL_MAX_CMDS 4
+#define IMPL_MAX_CMDS 5
 
-#define MAX_IMPL_CMD_FUNC_SZ 15 // max size of each const char *impl_cmd_funcs below
+#define MAX_IMPL_CMD_FUNC_SZ 31 // max size of each const char *impl_cmd_funcs below
 
 static const char *impl_cmd_funcs[IMPL_MAX_CMDS] = {
     "!exec", "!get", "!put",
-    "!exit"
+    "!inject", "!exit"
 };
 
 static const IMPL_FUNC impl_funcs[IMPL_MAX_CMDS] = {
     impl_EXEC, impl_GET, impl_PUT,
-    impl_EXIT
+    impl_INJECT, impl_EXIT
 };
 
 #endif

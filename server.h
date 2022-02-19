@@ -28,6 +28,9 @@ void handle_signals(int signo);
     *    serv_EXEC:    execute shell commands
     *    serv_GET:     download file
     *    serv_PUT:     upload file
+    *    serv_LOCAL:   execute local shell commands
+    *    serv_HELP:    display help
+    *    serv_INJECT:  inject shellcode
     *    serv_EXIT:    close RAT
 */
 BOOL serv_EXEC(IN SOCKET *s, IN const char *params);
